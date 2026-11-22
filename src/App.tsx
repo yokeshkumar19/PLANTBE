@@ -24,16 +24,17 @@ import { createThumbnailDataUrl } from "./utils/imageUtils";
 import { getSpeciesImage } from "./utils/speciesImages";
 import { logoutUser, subscribeToAuthChanges } from "./services/firebase";
 import { analyzePlantImage } from "./services/api";
+import ServerSettingsModal from "./components/ServerSettingsModal";
 import type { PlantAnalysisResult, ScanHistoryItem } from "./types/plant";
 import Icon, { type IconName } from "./components/BotanicalIcon";
 
 type Tab = "home" | "plants" | "history" | "tips" | "profile";
 
 function BrandHeader({
-  onOpenAuth,
+  onOpenProfile,
   initial = "Y",
 }: {
-  onOpenAuth?: () => void;
+  onOpenProfile?: () => void;
   initial?: string;
 }) {
   return (
@@ -60,9 +61,10 @@ function BrandHeader({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={onOpenAuth}
+          onClick={onOpenProfile}
           className="transition hover:opacity-85 active:scale-95"
-          title="Account / Sign In"
+          title="Profile"
+          aria-label="View Profile"
         >
           <Avatar size="sm" initial={initial} />
         </button>
@@ -568,9 +570,11 @@ function HomeScreen({
   plants = [],
   onAddScan,
   onInspectScan,
+  onDeleteScan,
   onOpenAuth,
   onSaveToMyPlants,
   onLearnMoreDisease,
+  onOpenServerSettings,
   userName = "Gardener",
 }: {
   onNavigate: (tab: Tab) => void;
@@ -578,9 +582,11 @@ function HomeScreen({
   plants?: SavedPlant[];
   onAddScan: (item: ScanHistoryItem) => void;
   onInspectScan: (item: ScanHistoryItem) => void;
+  onDeleteScan?: (scanId: string) => void;
   onOpenAuth?: () => void;
   onSaveToMyPlants?: (species: string, photoUrl?: string) => void;
   onLearnMoreDisease?: (diseaseName: string) => void;
+  onOpenServerSettings?: () => void;
   userName?: string;
 }) {
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -753,7 +759,7 @@ function HomeScreen({
 
   return (
     <div className="screen-content">
-      <BrandHeader onOpenAuth={onOpenAuth} initial={userName.charAt(0).toUpperCase() || "Y"} />
+      <BrandHeader onOpenProfile={() => onNavigate("profile")} initial={userName.charAt(0).toUpperCase() || "Y"} />
 
       {/* Greeting Section */}
       <section className="mb-4 mt-4">
@@ -922,6 +928,16 @@ function HomeScreen({
                 <div className="flex-1">
                   <p className="font-heading text-[11px] font-bold text-[#C93C36]">Analysis Notice</p>
                   <p className="mt-0.5 text-[11px] leading-relaxed text-[#8C3A35]">{errorMessage}</p>
+                  {onOpenServerSettings && (
+                    <button
+                      type="button"
+                      onClick={onOpenServerSettings}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[#075F32] border border-[#E3E5DC] shadow-2xs hover:bg-[#EDF4EF] active:scale-95 transition"
+                    >
+                      <Icon name="sparkles" size={12} className="text-[#075F32]" />
+                      <span>Configure Server URL</span>
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -1053,9 +1069,27 @@ function HomeScreen({
                     </span>
                   </div>
                 </div>
-                <span className="text-[#485C4E] group-hover:text-[#176B3A] transition">
-                  <Icon name="arrow" size={16} />
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {onDeleteScan && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Permanently delete scan for "${scan.name}"?`)) {
+                          onDeleteScan(scan.id);
+                        }
+                      }}
+                      title="Delete scan"
+                      aria-label="Delete scan"
+                      className="p-1.5 text-[#485C4E]/60 hover:text-[#C93C36] hover:bg-[#FFF0EF] rounded-lg transition"
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  )}
+                  <span className="text-[#485C4E] group-hover:text-[#176B3A] transition">
+                    <Icon name="arrow" size={16} />
+                  </span>
+                </div>
               </article>
             ))
           ) : (
@@ -1111,10 +1145,12 @@ function FilterChip({
 function HistoryScreen({
   scans,
   onInspectScan,
+  onDeleteScan,
   onNavigate,
 }: {
   scans: ScanHistoryItem[];
   onInspectScan: (item: ScanHistoryItem) => void;
+  onDeleteScan?: (scanId: string) => void;
   onNavigate?: (tab: Tab) => void;
 }) {
   const [filter, setFilter] = useState<"All" | "Healthy" | "Diseased">("All");
@@ -1248,9 +1284,27 @@ function HistoryScreen({
                   </span>
                 </div>
               </div>
-              <span className="text-[#485C4E] group-hover:text-[#176B3A] transition">
-                <Icon name="arrow" size={17} />
-              </span>
+              <div className="flex items-center gap-2">
+                {onDeleteScan && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Permanently delete scan for "${scan.name}"?`)) {
+                        onDeleteScan(scan.id);
+                      }
+                    }}
+                    title="Delete scan"
+                    aria-label="Delete scan"
+                    className="p-1.5 text-[#485C4E]/60 hover:text-[#C93C36] hover:bg-[#FFF0EF] rounded-lg transition"
+                  >
+                    <Icon name="trash" size={15} />
+                  </button>
+                )}
+                <span className="text-[#485C4E] group-hover:text-[#176B3A] transition">
+                  <Icon name="arrow" size={17} />
+                </span>
+              </div>
             </article>
           ))
         ) : (
@@ -1589,6 +1643,7 @@ function ProfileScreen({
   user,
   onOpenAuth,
   onEditProfile,
+  onOpenServerSettings,
   onLogout,
 }: {
   scans: ScanHistoryItem[];
@@ -1597,6 +1652,7 @@ function ProfileScreen({
   user?: UserSession | null;
   onOpenAuth?: () => void;
   onEditProfile?: () => void;
+  onOpenServerSettings?: () => void;
   onLogout?: () => void;
 }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -1687,6 +1743,13 @@ function ProfileScreen({
             icon="sparkles"
             label="AI Diagnosis Model"
             value="Groq Qwen 3.8 Vision"
+          />
+          <ProfileRow
+            icon="sparkles"
+            label="Backend Server URL"
+            value="Configured"
+            arrow
+            onClick={onOpenServerSettings}
           />
           <ProfileRow
             icon="shield"
@@ -1782,6 +1845,7 @@ export default function App() {
   const [userEmail, setUserEmail] = useState(() => user?.email || "user@plantcare.ai");
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showServerModal, setShowServerModal] = useState(false);
 
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [selectedScanDetail, setSelectedScanDetail] = useState<ScanHistoryItem | null>(null);
@@ -1884,6 +1948,22 @@ export default function App() {
     savePlantsToStorage(updated);
   };
 
+  const handleDeleteScan = (scanId: string) => {
+    setScans((prev) => {
+      const updated = prev.filter((s) => s.id !== scanId);
+      const key = getScansStorageKey(user);
+      try {
+        localStorage.setItem(key, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+    if (selectedScanDetail?.id === scanId) {
+      setSelectedScanDetail(null);
+    }
+  };
+
   const handleUpdatePlantCare = (plantId: string, careType: "water" | "fertilize" | "repot") => {
     const nowIso = new Date().toISOString();
     const updated = savedPlants.map((p) => {
@@ -1963,18 +2043,10 @@ export default function App() {
         } catch {
           // ignore
         }
-      } else {
-        // If not in guest mode, clear user session on Firebase signout
-        setUser((prev) => {
-          if (prev?.isGuest) return prev;
-          try {
-            localStorage.removeItem("plantcare_user");
-          } catch {
-            // ignore
-          }
-          return null;
-        });
       }
+      // Note: Do NOT clear user session on initial null from Firebase!
+      // Firebase fires an initial null state asynchronously on page mount before reading stored credentials.
+      // Explicit user signout is handled safely in handleLogout().
     });
 
     return () => unsubscribe();
@@ -2046,9 +2118,11 @@ export default function App() {
         plants={savedPlants}
         onAddScan={handleAddScan}
         onInspectScan={(scan) => setSelectedScanDetail(scan)}
+        onDeleteScan={handleDeleteScan}
         onOpenAuth={() => setIsAuthOpen(true)}
         onSaveToMyPlants={handleOpenAddPlant}
         onLearnMoreDisease={handleLearnMoreDisease}
+        onOpenServerSettings={() => setShowServerModal(true)}
         userName={userName}
       />
     ),
@@ -2073,6 +2147,7 @@ export default function App() {
       <HistoryScreen
         scans={scans}
         onInspectScan={(scan) => setSelectedScanDetail(scan)}
+        onDeleteScan={handleDeleteScan}
         onNavigate={setActiveTab}
       />
     ),
@@ -2089,6 +2164,7 @@ export default function App() {
         user={user}
         onOpenAuth={() => setIsAuthOpen(true)}
         onEditProfile={() => setShowEditModal(true)}
+        onOpenServerSettings={() => setShowServerModal(true)}
         onLogout={handleLogout}
       />
     ),
@@ -2117,6 +2193,7 @@ export default function App() {
               onClose={() => setSelectedScanDetail(null)}
               onSaveToMyPlants={handleOpenAddPlant}
               onLearnMoreDisease={handleLearnMoreDisease}
+              onDeleteScan={handleDeleteScan}
             />
 
             {/* Feature 2 & 3: Add / Edit Plant & Custom Reminder Schedule Modal */}
@@ -2168,6 +2245,11 @@ export default function App() {
                 }}
                 onClose={() => setShowEditModal(false)}
               />
+            )}
+
+            {/* Backend Server Settings Modal */}
+            {showServerModal && (
+              <ServerSettingsModal onClose={() => setShowServerModal(false)} />
             )}
 
             {/* In-App Auth / Switch Account Modal */}

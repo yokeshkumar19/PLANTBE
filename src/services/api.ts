@@ -1,12 +1,56 @@
 import type { ApiResponse, PlantAnalysisResult } from "../types/plant";
 
+export function isCapacitorNative(): boolean {
+  if (typeof window === "undefined") return false;
+  const win = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } };
+  if (win.Capacitor && typeof win.Capacitor.isNativePlatform === "function") {
+    return win.Capacitor.isNativePlatform();
+  }
+  return (
+    window.location.protocol === "capacitor:" ||
+    (window.location.protocol === "https:" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
+      /android|iphone|ipad/i.test(navigator.userAgent))
+  );
+}
+
+export function getCustomApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("plantcare_api_url");
+    if (saved && saved.trim()) return saved.trim().replace(/\/+$/, "");
+  }
+  return "";
+}
+
+export function setCustomApiBaseUrl(url: string): void {
+  if (typeof window !== "undefined") {
+    const clean = url.trim().replace(/\/+$/, "");
+    if (clean) {
+      localStorage.setItem("plantcare_api_url", clean);
+    } else {
+      localStorage.removeItem("plantcare_api_url");
+    }
+  }
+}
+
 /**
  * Resolves the backend base URL.
- * If running on HTTPS (such as Figma Make preview) and target is HTTP localhost,
- * use relative '/api' which Vite proxies to avoid browser Mixed Content blocks.
+ * Checks localStorage first, then VITE_API_BASE_URL.
+ * Prevents relative '/api' on Capacitor native where it hits local index.html.
  */
 export function getApiBaseUrl(): string {
+  const custom = getCustomApiBaseUrl();
+  if (custom) return custom;
+
   const envUrl = (import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+
+  // Inside Capacitor Native (Android APK)
+  if (isCapacitorNative()) {
+    if (envUrl && !envUrl.startsWith("/")) {
+      return envUrl;
+    }
+    return "https://plantbe.onrender.com";
+  }
 
   if (typeof window !== "undefined") {
     // 1. If running over HTTPS (such as cloud preview), prefer explicit HTTPS URL or relative /api proxy
@@ -14,17 +58,16 @@ export function getApiBaseUrl(): string {
       if (envUrl.startsWith("https://")) {
         return envUrl;
       }
-      return "/api";
+      return envUrl || "https://plantbe.onrender.com";
     }
 
-    // 2. If accessed via local network on mobile (e.g. 192.168.x.x):
-    // Use relative /api which Vite automatically proxies to http://127.0.0.1:8000
+    // 2. If accessed via local network on mobile browser (e.g. 192.168.x.x):
     if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-      return "/api";
+      return envUrl || "https://plantbe.onrender.com";
     }
   }
 
-  return envUrl || "http://localhost:8000";
+  return envUrl || "https://plantbe.onrender.com";
 }
 
 /**
@@ -218,8 +261,8 @@ export async function analyzePlantImage(file: File): Promise<PlantAnalysisResult
     console.error("Network error during /analyze request:", err);
     throw new Error(
       "Unable to connect to the analysis server. Please verify your backend is running at " +
-        baseUrl +
-        " and CORS is configured.",
+      baseUrl +
+      " and CORS is configured.",
     );
   }
 
@@ -241,12 +284,28 @@ export async function analyzePlantImage(file: File): Promise<PlantAnalysisResult
     throw new Error(errorDetail);
   }
 
+  let responseText = "";
+  try {
+    responseText = await response.text();
+  } catch (err) {
+    console.error("Failed to read response from /analyze:", err);
+    throw new Error("Unable to read response from the analysis server.");
+  }
+
+  // Detect HTML fallback (e.g. WebView serving index.html or 404/502 page)
+  const trimmed = responseText.trim().toLowerCase();
+  if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
+    throw new Error(
+      `Cannot reach the Python backend server at ${baseUrl}. Ensure backend/server.py is running on your network (or deployed to cloud) and verify your Backend URL in Settings.`,
+    );
+  }
+
   let data: ApiResponse;
   try {
-    data = await response.json();
+    data = JSON.parse(responseText);
   } catch (err) {
-    console.error("Failed to parse response JSON from /analyze:", err);
-    throw new Error("Invalid response format received from backend.");
+    console.error("Failed to parse response JSON from /analyze:", err, responseText);
+    throw new Error("Invalid response format received from backend: " + responseText.slice(0, 120));
   }
 
   if (!data.success) {

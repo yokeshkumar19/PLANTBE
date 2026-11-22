@@ -22,16 +22,20 @@ interface LoginScreenProps {
   onLoginSuccess: (user: UserSession) => void;
   onCancel?: () => void;
   isModal?: boolean;
-  initialMode?: "login" | "signup";
+  initialMode?: "welcome" | "login" | "signup";
 }
 
 export default function LoginScreen({
   onLoginSuccess,
   onCancel,
   isModal = false,
-  initialMode = "login",
+  initialMode,
 }: LoginScreenProps) {
-  const [view, setView] = useState<"login" | "signup" | "forgot">(initialMode);
+  // On fresh app install or unauthenticated launch, show the Welcome choice (Sign Up vs Log In) first.
+  // In-app modal defaults to "login" directly.
+  const [view, setView] = useState<"welcome" | "login" | "signup" | "forgot">(
+    initialMode || (isModal ? "login" : "welcome")
+  );
 
   // Email form fields
   const [name, setName] = useState("");
@@ -110,7 +114,18 @@ export default function LoginScreen({
         isGuest: false,
       });
     } catch (err: unknown) {
-      setErrorMessage(formatAuthError(err));
+      const formatted = formatAuthError(err);
+      // If user hasn't registered yet, give actionable guidance
+      if (
+        formatted.includes("No account found") ||
+        formatted.includes("user-not-found")
+      ) {
+        setErrorMessage(
+          "No account found with this email. Please click the 'Sign Up' tab above to create your account first."
+        );
+      } else {
+        setErrorMessage(formatted);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -208,95 +223,23 @@ export default function LoginScreen({
         />
 
         <h1 className="mt-3 font-heading text-[22px] font-extrabold text-[#1D3023] tracking-[-0.02em]">
-          {view === "login" && "Welcome to PlantCare"}
+          {view === "welcome" && "Welcome to PlantCare"}
+          {view === "login" && "Welcome Back"}
           {view === "signup" && "Create an Account"}
           {view === "forgot" && "Reset Password"}
         </h1>
         <p className="mt-1 text-[12px] text-[#485C4E] max-w-[320px]">
-          {view === "login" && "Sign in with Google or email to access your plant health diagnostics."}
+          {view === "welcome" && "Smart botanical diagnostics, disease prevention, and custom care in your pocket."}
+          {view === "login" && "Sign in to access your saved plants, custom schedules, and scan history."}
           {view === "signup" && "Join PlantCare AI to monitor health, diagnose issues, and grow greener."}
           {view === "forgot" && "Enter your email address to receive password reset instructions."}
         </p>
       </div>
 
-      {/* Primary: Google Sign In Button */}
-      <div className="mt-6 w-full space-y-3">
-        <button
-          type="button"
-          onClick={handleGoogleAuth}
-          disabled={isLoading || isGoogleLoading}
-          className="flex h-12 w-full items-center justify-center gap-3 rounded-[14px] border border-[#E3E5DC] bg-white text-[13px] font-bold text-[#1D3023] shadow-xs hover:bg-[#F2F4EE] active:scale-[0.98] transition disabled:opacity-60"
-        >
-          {isGoogleLoading ? (
-            <span className="inline-flex items-center gap-2 text-[#485C4E]">
-              <Icon name="spinner" size={18} className="animate-spin text-[#075F32]" />
-              <span>Connecting with Google...</span>
-            </span>
-          ) : (
-            <>
-              <svg className="size-5 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.27 21.36 7.34 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.17 0 9.99 0 12s.46 3.83 1.26 5.42l4.02-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </>
-          )}
-        </button>
-
-        {/* Guest Entry Button */}
-        <button
-          type="button"
-          onClick={handleGuestEntry}
-          disabled={isLoading || isGoogleLoading}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-[14px] bg-[#EDF4EF] text-[12px] font-bold text-[#075F32] hover:bg-[#DCEADF] active:scale-[0.98] transition disabled:opacity-60"
-        >
-          <Icon name="leaf" size={14} className="text-[#075F32]" />
-          <span>Continue as Guest</span>
-        </button>
-      </div>
-
-      {/* Divider */}
-      <div className="relative my-5 w-full flex items-center justify-center">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-[#E3E5DC]" />
-        </div>
-        <span className="relative bg-[#F7F6F0] px-3 text-[11px] font-semibold text-[#485C4E]">
-          or use email
-        </span>
-      </div>
-
-      {/* Mode Switcher Tabs (Log In vs Sign Up) */}
-      {view !== "forgot" && (
-        <div className="w-full flex rounded-[14px] bg-[#EDF4EF] p-1 border border-[#E3E5DC]">
-          <button
-            type="button"
-            onClick={() => {
-              setView("login");
-              setErrorMessage(null);
-              setSuccessMessage(null);
-            }}
-            className={`flex-1 rounded-[10px] py-2 text-[12px] font-bold transition ${
-              view === "login"
-                ? "bg-white text-[#075F32] shadow-xs"
-                : "text-[#485C4E] hover:text-[#1D3023]"
-            }`}
-          >
-            Log In
-          </button>
+      {/* VIEW: WELCOME ONBOARDING SELECTION (Initial install view) */}
+      {view === "welcome" && (
+        <div className="mt-7 w-full space-y-3">
+          {/* Option 1: Create Account / Sign Up */}
           <button
             type="button"
             onClick={() => {
@@ -304,15 +247,170 @@ export default function LoginScreen({
               setErrorMessage(null);
               setSuccessMessage(null);
             }}
-            className={`flex-1 rounded-[10px] py-2 text-[12px] font-bold transition ${
-              view === "signup"
-                ? "bg-white text-[#075F32] shadow-xs"
-                : "text-[#485C4E] hover:text-[#1D3023]"
-            }`}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-[#075F32] text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(7,95,50,0.25)] hover:bg-[#153B27] active:scale-[0.98] transition"
           >
-            Sign Up
+            <Icon name="leaf" size={16} className="text-white" />
+            <span>Create Account (Sign Up)</span>
+          </button>
+
+          {/* Option 2: Log In */}
+          <button
+            type="button"
+            onClick={() => {
+              setView("login");
+              setErrorMessage(null);
+              setSuccessMessage(null);
+            }}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-[14px] border border-[#075F32]/25 bg-white text-[13px] font-bold text-[#075F32] hover:bg-[#EDF4EF] active:scale-[0.98] transition shadow-2xs"
+          >
+            <span>I Already Have an Account (Log In)</span>
+          </button>
+
+          {/* Divider */}
+          <div className="relative my-4 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#E3E5DC]" />
+            </div>
+            <span className="relative bg-[#F7F6F0] px-3 text-[11px] font-semibold text-[#485C4E]">
+              or continue with
+            </span>
+          </div>
+
+          {/* Option 3: Continue with Google */}
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={isLoading || isGoogleLoading}
+            className="flex h-12 w-full items-center justify-center gap-3 rounded-[14px] border border-[#E3E5DC] bg-white text-[13px] font-bold text-[#1D3023] shadow-xs hover:bg-[#F2F4EE] active:scale-[0.98] transition disabled:opacity-60"
+          >
+            {isGoogleLoading ? (
+              <span className="inline-flex items-center gap-2 text-[#485C4E]">
+                <Icon name="spinner" size={18} className="animate-spin text-[#075F32]" />
+                <span>Connecting with Google...</span>
+              </span>
+            ) : (
+              <>
+                <svg className="size-5 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.27 21.36 7.34 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.17 0 9.99 0 12s.46 3.83 1.26 5.42l4.02-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </>
+            )}
+          </button>
+
+          {/* Option 4: Continue as Guest */}
+          <button
+            type="button"
+            onClick={handleGuestEntry}
+            disabled={isLoading || isGoogleLoading}
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-[14px] bg-[#EDF4EF] text-[12px] font-bold text-[#075F32] hover:bg-[#DCEADF] active:scale-[0.98] transition disabled:opacity-60"
+          >
+            <Icon name="leaf" size={14} className="text-[#075F32]" />
+            <span>Continue as Guest</span>
           </button>
         </div>
+      )}
+
+      {/* For Login & Sign Up views: Google Button, Divider, and Switcher Tabs */}
+      {(view === "login" || view === "signup") && (
+        <>
+          <div className="mt-5 w-full">
+            <button
+              type="button"
+              onClick={handleGoogleAuth}
+              disabled={isLoading || isGoogleLoading}
+              className="flex h-11.5 w-full items-center justify-center gap-3 rounded-[14px] border border-[#E3E5DC] bg-white text-[13px] font-bold text-[#1D3023] shadow-xs hover:bg-[#F2F4EE] active:scale-[0.98] transition disabled:opacity-60"
+            >
+              {isGoogleLoading ? (
+                <span className="inline-flex items-center gap-2 text-[#485C4E]">
+                  <Icon name="spinner" size={18} className="animate-spin text-[#075F32]" />
+                  <span>Connecting with Google...</span>
+                </span>
+              ) : (
+                <>
+                  <svg className="size-5 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.27 21.36 7.34 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.17 0 9.99 0 12s.46 3.83 1.26 5.42l4.02-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.27 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                    />
+                  </svg>
+                  <span>Continue with Google</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-4 w-full flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#E3E5DC]" />
+            </div>
+            <span className="relative bg-[#F7F6F0] px-3 text-[11px] font-semibold text-[#485C4E]">
+              or use email
+            </span>
+          </div>
+
+          {/* Mode Switcher Tabs (Log In vs Sign Up) */}
+          <div className="w-full flex rounded-[14px] bg-[#EDF4EF] p-1 border border-[#E3E5DC]">
+            <button
+              type="button"
+              onClick={() => {
+                setView("login");
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 rounded-[10px] py-2 text-[12px] font-bold transition ${
+                view === "login"
+                  ? "bg-white text-[#075F32] shadow-xs"
+                  : "text-[#485C4E] hover:text-[#1D3023]"
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setView("signup");
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex-1 rounded-[10px] py-2 text-[12px] font-bold transition ${
+                view === "signup"
+                  ? "bg-white text-[#075F32] shadow-xs"
+                  : "text-[#485C4E] hover:text-[#1D3023]"
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+        </>
       )}
 
       {/* Feedback Alert Banners */}
@@ -430,6 +528,39 @@ export default function LoginScreen({
               "Log In with Email"
             )}
           </button>
+
+          {/* Switch to Sign Up */}
+          <div className="pt-2 text-center text-[12px] text-[#485C4E]">
+            <span>Don't have an account? </span>
+            <button
+              type="button"
+              onClick={() => {
+                setView("signup");
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className="font-bold text-[#075F32] hover:underline"
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {!isModal && (
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setView("welcome");
+                  setErrorMessage(null);
+                  setSuccessMessage(null);
+                }}
+                className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[#485C4E] hover:text-[#075F32] transition"
+              >
+                <Icon name="arrow" size={12} className="rotate-180" />
+                <span>Back to options</span>
+              </button>
+            </div>
+          )}
         </form>
       )}
 
@@ -596,6 +727,39 @@ export default function LoginScreen({
               "Create Account"
             )}
           </button>
+
+          {/* Switch to Log In */}
+          <div className="pt-2 text-center text-[12px] text-[#485C4E]">
+            <span>Already have an account? </span>
+            <button
+              type="button"
+              onClick={() => {
+                setView("login");
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className="font-bold text-[#075F32] hover:underline"
+            >
+              Log In
+            </button>
+          </div>
+
+          {!isModal && (
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setView("welcome");
+                  setErrorMessage(null);
+                  setSuccessMessage(null);
+                }}
+                className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[#485C4E] hover:text-[#075F32] transition"
+              >
+                <Icon name="arrow" size={12} className="rotate-180" />
+                <span>Back to options</span>
+              </button>
+            </div>
+          )}
         </form>
       )}
 

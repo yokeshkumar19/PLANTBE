@@ -3,13 +3,21 @@ import base64
 import re
 from io import BytesIO
 
+from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from groq import Groq
 
-load_dotenv()
+# Load .env from backend directory or project root
+base_dir = Path(__file__).resolve().parent
+if (base_dir / ".env").exists():
+    load_dotenv(base_dir / ".env")
+elif (base_dir.parent / ".env").exists():
+    load_dotenv(base_dir.parent / ".env")
+else:
+    load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
@@ -134,17 +142,10 @@ Return ONLY a valid JSON object matching this structure (no markdown fences, no 
         )
 
         result = response.choices[0].message.content
-        print("=== RAW RESULT START ===")
-        print(result)
-        print("=== RAW RESULT END ===")
 
         json_match = re.search(r'\{.*\}', result, re.DOTALL)
         if json_match:
             result = json_match.group(0)
-
-        print("=== CLEANED RESULT START ===")
-        print(result)
-        print("=== CLEANED RESULT END ===")
 
         return {
             "success": True,

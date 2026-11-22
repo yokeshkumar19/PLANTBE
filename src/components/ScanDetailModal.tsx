@@ -9,6 +9,7 @@ interface ScanDetailModalProps {
   onClose: () => void;
   onSaveToMyPlants?: (species: string, photoUrl?: string) => void;
   onLearnMoreDisease?: (diseaseName: string) => void;
+  onDeleteScan?: (scanId: string) => void;
 }
 
 export default function ScanDetailModal({
@@ -16,8 +17,10 @@ export default function ScanDetailModal({
   onClose,
   onSaveToMyPlants,
   onLearnMoreDisease,
+  onDeleteScan,
 }: ScanDetailModalProps) {
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   if (!scan) return null;
 
@@ -259,6 +262,50 @@ export default function ScanDetailModal({
             Done
           </button>
         </div>
+
+        {/* Delete Scan Action */}
+        {onDeleteScan && (
+          <div className="mt-3 pt-2.5 border-t border-[#E3E5DC]/70">
+            {showConfirmDelete ? (
+              <div className="flex items-center justify-between gap-2 rounded-[12px] bg-[#FFF0EF] p-2.5 border border-[#C93C36]/25">
+                <span className="text-[11px] font-semibold text-[#C93C36]">
+                  Delete this scan record permanently?
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmDelete(false)}
+                    className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[#485C4E] border border-[#E3E5DC]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDeleteScan(scan.id);
+                      onClose();
+                    }}
+                    className="rounded-lg bg-[#C93C36] px-2.5 py-1 text-[11px] font-bold text-white shadow-2xs hover:bg-[#A82B26] transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmDelete(true)}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#C93C36] hover:text-[#A82B26] transition py-1"
+                >
+                  <Icon name="trash" size={13} className="text-[#C93C36]" />
+                  <span>Delete Scan</span>
+                </button>
+                <span className="text-[10px] text-[#485C4E]">{scan.date}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

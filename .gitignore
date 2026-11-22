@@ -19,6 +19,10 @@ logs/
 /.plugins/
 /.opencode-skills/
 
+# IDE and Editor files
+.idea/
+.vscode/
+
 # Android build artifacts and secrets
 android/.gradle/
 android/app/build/

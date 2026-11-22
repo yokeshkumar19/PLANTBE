@@ -1,0 +1,10 @@
+{
+  "description": "Identify plant diseases by uploading or photographing leaves to receive diagnosis, confidence levels, treatment tips, and care guidance for healthier plants.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

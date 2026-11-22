@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PlantCare Ai</string>
+    <string name="title_activity_main">PlantCare Ai</string>
+    <string name="package_name">com.plantcare.ai</string>
+    <string name="custom_url_scheme">com.plantcare.ai</string>
+</resources>

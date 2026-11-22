@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "766383592694",
+    "firebase_url": "https://plantcare-bea50-default-rtdb.firebaseio.com",
+    "project_id": "plantcare-bea50",
+    "storage_bucket": "plantcare-bea50.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:766383592694:android:af6bc8b567746f7fce88d7",
+        "android_client_info": {
+          "package_name": "com.plantcare.ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "766383592694-4vjficjhg6tliv9a9r7sccrstjiukr3h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.plantcare.ai",
+            "certificate_hash": "6754212137439dfe8fc69b6b5874f812a6708e06"
+          }
+        },
+        {
+          "client_id": "766383592694-n2l3phm32dmdol8lfe36v1ihrecbkm9p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9Dje0XH7KTxRmUQVO9ofc_8ZIcZa9q1Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "766383592694-n2l3phm32dmdol8lfe36v1ihrecbkm9p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
